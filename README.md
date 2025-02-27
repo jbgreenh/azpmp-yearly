@@ -7,6 +7,7 @@ charts for the arizona pmp yearly report for 2024
 [buprenorphine dispensations by year](https://jbgreenh.github.io/azpmp-yearly-2024/bup.html)  
 [buprenorphine prescription rate by patient county](https://jbgreenh.github.io/azpmp-yearly-2024/bup_county_map.html)  
 [controlled substance prescription rate by patient county](https://jbgreenh.github.io/azpmp-yearly-2024/county_map.html)  
+[county maps combined](https://jbgreenh.github.io/azpmp-yearly-2024/county_map_combined.html)  
 [cs prescription rate by patient county (line)](https://jbgreenh.github.io/azpmp-yearly-2024/county_rates.html)  
 [dispensations by drug type](https://jbgreenh.github.io/azpmp-yearly-2024/obs_stacked.html)  
 [opioid vs buprenorphine prescription rate by patient county](https://jbgreenh.github.io/azpmp-yearly-2024/opi_bup_county_rate_bubble.html)  
