@@ -2,6 +2,7 @@
 
 charts for the arizona pmp yearly report for 2024
 
+[androgen prescriptions by prescriber state](https://jbgreenh.github.io/azpmp-yearly-2024/andro_oos.html)  
 [benzodiazepine prescriptions by prescriber state](https://jbgreenh.github.io/azpmp-yearly-2024/benzo_oos.html)  
 [buprenorphine dispensations by year](https://jbgreenh.github.io/azpmp-yearly-2024/bup.html)  
 [county maps combined](https://jbgreenh.github.io/azpmp-yearly-2024/county_map_combined.html)  
