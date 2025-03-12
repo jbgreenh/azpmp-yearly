@@ -6,11 +6,14 @@ import plotly.express as px
 import plotly.graph_objects as go
 import polars as pl
 import requests
+from dotenv import load_dotenv
 from plotly.subplots import make_subplots
 
 import tableau
 
-WORKBOOK = 'Annual Report 2024'
+WORKBOOK = 'annual report'
+YEAR = 2024
+load_dotenv()
 
 # extra luids for now
 # total_cs_quantity = tableau.find_view_luid(view_name='Total CS Ave Quantity', workbook_name=workbook)
@@ -33,68 +36,8 @@ def county_data():
     # county data
     # ---
     print('generating county data...')
+
     counties = requests.get('https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json').json()
-
-    total_cs_pat_county = tableau.find_view_luid(view_name='Total CS by Patient County', workbook_name=WORKBOOK)
-    opi_disp_pat_county = tableau.find_view_luid(view_name='Total Opi by Patient County', workbook_name=WORKBOOK)
-    bup_disp_pat_county = tableau.find_view_luid(view_name='Total Bup by Patient County', workbook_name=WORKBOOK)
-    benzo_dis_pat_county = tableau.find_view_luid(view_name='Total Benzo by Patient County', workbook_name=WORKBOOK)
-    stim_disp_pat_county = tableau.find_view_luid(view_name='Total Stimulant by Patient County', workbook_name=WORKBOOK)
-    andro_disp_pat_county = tableau.find_view_luid(view_name='Androgens by Patient County', workbook_name=WORKBOOK)
-
-    rx_pat_county = (
-        tableau.lazyframe_from_view_id(total_cs_pat_county, infer_schema_length=100).collect()
-        .select(
-            pl.col('Orig Patient County').str.to_uppercase().alias('county'),
-            pl.col('Year of Filled At').alias('year_filled'),
-            pl.col('Prescription Count').str.replace_all(',','').cast(pl.Int32).alias('rx_count')
-        )
-    )
-
-    opi_pat_county = (
-        tableau.lazyframe_from_view_id(opi_disp_pat_county, infer_schema_length=100).collect()
-        .select(
-            pl.col('Orig Patient County').str.to_uppercase().alias('county'),
-            pl.col('Year of Filled At').alias('year_filled'),
-            pl.col('Prescription Count').str.replace_all(',','').cast(pl.Int32).alias('opi_rx_count')
-        )
-    )
-
-    bup_pat_county = (
-        tableau.lazyframe_from_view_id(bup_disp_pat_county, infer_schema_length=100).collect()
-        .select(
-            pl.col('Orig Patient County').str.to_uppercase().alias('county'),
-            pl.col('Year of Filled At').alias('year_filled'),
-            pl.col('Prescription Count').str.replace_all(',','').cast(pl.Int32).alias('bup_rx_count')
-        )
-    )
-
-    benzo_pat_county = (
-        tableau.lazyframe_from_view_id(benzo_dis_pat_county, infer_schema_length=100).collect()
-        .select(
-            pl.col('Orig Patient County').str.to_uppercase().alias('county'),
-            pl.col('Year of Filled At').alias('year_filled'),
-            pl.col('Prescription Count').str.replace_all(',','').cast(pl.Int32).alias('benzo_rx_count')
-        )
-    )
-
-    stim_pat_county = (
-        tableau.lazyframe_from_view_id(stim_disp_pat_county, infer_schema_length=100).collect()
-        .select(
-            pl.col('Orig Patient County').str.to_uppercase().alias('county'),
-            pl.col('Year of Filled At').alias('year_filled'),
-            pl.col('Prescription Count').str.replace_all(',','').cast(pl.Int32).alias('stim_rx_count')
-        )
-    )
-
-    andro_pat_county = (
-        tableau.lazyframe_from_view_id(andro_disp_pat_county, infer_schema_length=100).collect()
-        .select(
-            pl.col('Orig Patient County').str.to_uppercase().alias('county'),
-            pl.col('Year of Filled At').alias('year_filled'),
-            pl.col('Prescription Count').str.replace_all(',','').cast(pl.Int32).alias('andro_rx_count')
-        )
-    )
 
     fips_txt = requests.get('https://transition.fcc.gov/oet/info/maps/census/fips/fips.txt').content.decode()
     sections = re.split(r'-+\s+-+', fips_txt)
@@ -120,110 +63,66 @@ def county_data():
         'in':f'state:{fips_state.filter(pl.col('state') == 'ARIZONA')['fips'].item()}',
         'key':CENSUS_API_KEY
     }
+
     response = requests.get(url, params=params)
+
     if response.status_code == 200:
         data = response.json()
         county_pop_dict = {'county':[], 'population':[]}
-        counties = data[1:]
-        for county in counties:
+        census_counties = data[1:]
+
+        for county in census_counties:
             population, state, county = county
             county_pop_dict['population'].append(int(population))
             county_pop_dict['county'].append(f'{state}{county}')
-            county_pop_df = pl.DataFrame(county_pop_dict)
+
+        county_pop_df = pl.DataFrame(county_pop_dict)
     else:
         sys.exit(f'error: {response.status_code}, {response.text}')
 
     pop = (
         county_pop_df.join(fips, left_on='county', right_on='fips', how='left', coalesce=True)
         .select(
+            pl.col('county').alias('fips'),
             pl.col('county_right').str.to_uppercase().str.strip_suffix(' COUNTY').alias('county'),
             pl.col('population')
         )
     )
-    print(pop)
+
+    total_cs_pat_county = tableau.find_view_luid(view_name='Total CS by Patient County', workbook_name=WORKBOOK)
+
+    rx_pat_county = (
+        tableau.lazyframe_from_view_id(total_cs_pat_county, infer_schema_length=100).collect()
+        .select(
+            pl.col('Orig Patient County').str.to_uppercase().alias('county'),
+            pl.col('Year of Filled At').alias('year_filled'),
+            pl.col('drug type'),
+            pl.col('Prescription Count').str.replace_all(',','').cast(pl.Int32).alias('rx_count')
+        )
+        .pivot('drug type', index=['county', 'year_filled'], values='rx_count')
+        .rename({'All':'all_cs'})
+    )
 
     pat_county_rates = (
         rx_pat_county.join(pop, on='county', how='left', coalesce=True)
-        .join(fips, on='county', how='left', coalesce=True)
         .with_columns(
-            ((pl.col('rx_count') / pl.col('population')) * pl.lit(1000)).alias('rx_per1000'),
+            ((pl.col('all_cs') / pl.col('population')) * pl.lit(1000)).alias('rx_per1000'),
+            ((pl.col('opioid') / pl.col('population')) * pl.lit(1000)).alias('opi_rx_per1000'),
+            ((pl.col('benzodiazepine') / pl.col('population')) * pl.lit(1000)).alias('benzo_rx_per1000'),
+            ((pl.col('stimulant') / pl.col('population')) * pl.lit(1000)).alias('stim_rx_per1000'),
+            ((pl.col('androgen') / pl.col('population')) * pl.lit(1000)).alias('andro_rx_per1000'),
+            ((pl.col('buprenorphine') / pl.col('population')) * pl.lit(1000)).alias('bup_rx_per1000'),
         )
         .rename(
             {'county':'patient_county'}
         )
-    )
-
-    opi_pat_county_rates = (
-        opi_pat_county.join(pop, on='county', how='left', coalesce=True)
-        .join(fips, on='county', how='left', coalesce=True)
-        .with_columns(
-            ((pl.col('opi_rx_count') / pl.col('population')) * pl.lit(1000)).alias('opi_rx_per1000'),
-        )
-        .rename(
-            {'county':'patient_county'}
-        )
-    )
-
-    benzo_pat_county_rates = (
-        benzo_pat_county.join(pop, on='county', how='left', coalesce=True)
-        .join(fips, on='county', how='left', coalesce=True)
-        .with_columns(
-            ((pl.col('benzo_rx_count') / pl.col('population')) * pl.lit(1000)).alias('benzo_rx_per1000'),
-        )
-        .rename(
-            {'county':'patient_county'}
-        )
-    )
-
-    stim_pat_county_rates = (
-        stim_pat_county.join(pop, on='county', how='left', coalesce=True)
-        .join(fips, on='county', how='left', coalesce=True)
-        .with_columns(
-            ((pl.col('stim_rx_count') / pl.col('population')) * pl.lit(1000)).alias('stim_rx_per1000'),
-        )
-        .rename(
-            {'county':'patient_county'}
-        )
-    )
-
-    bup_pat_county_rates = (
-        bup_pat_county.join(pop, on='county', how='left', coalesce=True)
-        .join(fips, on='county', how='left', coalesce=True)
-        .with_columns(
-            ((pl.col('bup_rx_count') / pl.col('population')) * pl.lit(1000)).alias('bup_rx_per1000'),
-        )
-        .rename(
-            {'county':'patient_county'}
-        )
-    )
-
-    andro_pat_county_rates = (
-        andro_pat_county.join(pop, on='county', how='left', coalesce=True)
-        .join(fips, on='county', how='left', coalesce=True)
-        .with_columns(
-            ((pl.col('andro_rx_count') / pl.col('population')) * pl.lit(1000)).alias('andro_rx_per1000'),
-        )
-        .rename(
-            {'county':'patient_county'}
-        )
-    )
-
-    opi_bup_benz_stim = (
-        opi_pat_county_rates
-        .join(bup_pat_county_rates, on=['patient_county', 'year_filled'], how='left', coalesce=True)
-        .join(benzo_pat_county_rates, on=['patient_county', 'year_filled'], how='left', coalesce=True)
-        .join(stim_pat_county_rates, on=['patient_county', 'year_filled'], how='left', coalesce=True)
-        .join(andro_pat_county_rates, on=['patient_county', 'year_filled'], how='left', coalesce=True)
-        .join(pat_county_rates, on=['patient_county', 'year_filled'], how='left', coalesce=True)
         .sort('year_filled')
     )
-    opi_bup_benz_stim.write_clipboard()
-    print('obbs written to clipboard')
 
     fig = make_subplots(
         rows=2, cols=3,
         subplot_titles=(
-            'all cs', 'opioids', 'benzodiazepines', 'stimulants', 'buprenorphine', 'androgens'
+            'all_cs', 'opioids', 'benzodiazepines', 'stimulants', 'buprenorphine', 'androgens'
         ),
         vertical_spacing=0.04,
         horizontal_spacing=.005,
@@ -233,10 +132,10 @@ def county_data():
         ]
     )
 
-    metrics = [('rx_per1000','rx_count'), ('opi_rx_per1000','opi_rx_count'), ('benzo_rx_per1000','benzo_rx_count'), ('stim_rx_per1000','stim_rx_count'), ('bup_rx_per1000','bup_rx_count'), ('andro_rx_per1000','andro_rx_count')]
+    metrics = [('rx_per1000','all_cs'), ('opi_rx_per1000','opioid'), ('benzo_rx_per1000','benzodiazepine'), ('stim_rx_per1000','stimulant'), ('bup_rx_per1000','buprenorphine'), ('andro_rx_per1000','androgen')]
     positions = [(1, 1), (1, 2), (1, 3), (2, 1), (2, 2), (2,3)]
     for (row, col), metric in zip(positions, metrics):
-        obbs_year = opi_bup_benz_stim.filter(pl.col('year_filled') == pl.col('year_filled').min())
+        obbs_year = pat_county_rates.filter(pl.col('year_filled') == pl.col('year_filled').min())
         fig.add_trace(go.Choropleth(
             geojson=counties,
             locations=obbs_year['fips'],
@@ -258,8 +157,8 @@ def county_data():
         ), row=row, col=col)
 
     frames = []
-    for year in opi_bup_benz_stim['year_filled'].unique().sort():
-        obbs_year = opi_bup_benz_stim.filter(pl.col('year_filled') == year)
+    for year in pat_county_rates['year_filled'].unique().sort():
+        obbs_year = pat_county_rates.filter(pl.col('year_filled') == year)
         frame_data = []
         for metric in metrics:
             frame_data.append(go.Choropleth(
@@ -320,14 +219,14 @@ def county_data():
     for row, col in positions:
         fig.update_geos(projection_type='mercator', fitbounds='locations', row=row, col=col)
 
-    fig.write_html('data/charts/county_map_combined.html', config={'displayModeBar':False} ,include_plotlyjs='cdn')
+    fig.write_html(f'charts/{YEAR}/county_map_combined.html', config={'displayModeBar':False} ,include_plotlyjs='cdn')
 
     # county_rate_line = px.line(opi_bup_benz_stim, x='year_filled', y='rx_per1000', color='patient_county', color_discrete_sequence=px.colors.qualitative.Light24, title='cs prescription rate by patient county')
     # county_rate_line.write_image('data/charts/county_rates.png')
     # county_rate_line.write_html('data/charts/county_rates.html', include_plotlyjs='cdn')
 
     opi_bup_county_rate_bubble = px.scatter(
-        opi_bup_benz_stim,
+        pat_county_rates,
         x='opi_rx_per1000',
         y='bup_rx_per1000',
         size='population',
@@ -338,10 +237,10 @@ def county_data():
         title='opioid vs buprenorphine prescription rate by patient county'
     )
     opi_bup_county_rate_bubble.update_traces(marker=dict(sizemin=5))
-    opi_bup_county_rate_bubble.write_html('data/charts/opi_bup_county_rate_bubble.html', include_plotlyjs='cdn')
+    opi_bup_county_rate_bubble.write_html(f'charts/{YEAR}/opi_bup_county_rate_bubble.html', include_plotlyjs='cdn')
 
     # opi_rx_county_rate_bubble = px.scatter(
-    #     opi_bup_benz_stim,
+    #     pat_county_rates,
     #     x='rx_per1000',
     #     y='opi_rx_per1000',
     #     size='population',
@@ -355,7 +254,7 @@ def county_data():
     # opi_rx_county_rate_bubble.write_html('data/charts/opi_rx_county_rate_bubble.html', include_plotlyjs='cdn')
     #
     # county_rate_map = px.choropleth_map(
-    #     data_frame=opi_bup_benz_stim,
+    #     data_frame=pat_county_rates,
     #     geojson=counties,
     #     locations='fips',
     #     color='rx_per1000',
@@ -363,14 +262,14 @@ def county_data():
     #     center = {"lat": 34.2744, "lon": -111.6602},
     #     opacity=1,
     #     zoom=5,
-    #     hover_data={'patient_county':True, 'rx_per1000':':.2f', 'rx_count':':,d', 'population':':,d', 'fips':False},
+    #     hover_data={'patient_county':True, 'rx_per1000':':.2f', 'all_cs':':,d', 'population':':,d', 'fips':False},
     #     title='cs prescription rate by patient county',
     #     animation_frame='year_filled'
     # )
-    # county_rate_map.write_html('data/charts/county_map.html', include_plotlyjs='cdn')
+    # county_rate_map.write_html('charts/2024/county_map.html', include_plotlyjs='cdn')
     #
     # opi_county_rate_map = px.choropleth_map(
-    #     data_frame=opi_bup_benz_stim,
+    #     data_frame=pat_county_rates,
     #     geojson=counties,
     #     locations='fips',
     #     color='opi_rx_per1000',
@@ -385,7 +284,7 @@ def county_data():
     # opi_county_rate_map.write_html('data/charts/opi_county_map.html', include_plotlyjs='cdn')
     #
     # benzo_county_rate_map = px.choropleth_map(
-    #     data_frame=opi_bup_benz_stim,
+    #     data_frame=pat_county_rates,
     #     geojson=counties,
     #     locations='fips',
     #     color='benzo_rx_per1000',
@@ -400,7 +299,7 @@ def county_data():
     # benzo_county_rate_map.write_html('data/charts/benzo_county_map.html', include_plotlyjs='cdn')
     #
     # stim_county_rate_map = px.choropleth_map(
-    #     data_frame=opi_bup_benz_stim,
+    #     data_frame=pat_county_rates,
     #     geojson=counties,
     #     locations='fips',
     #     color='stim_rx_per1000',
@@ -415,7 +314,7 @@ def county_data():
     # stim_county_rate_map.write_html('data/charts/stim_county_map.html', include_plotlyjs='cdn')
     #
     # bup_county_rate_map = px.choropleth_map(
-    #     data_frame=opi_bup_benz_stim,
+    #     data_frame=pat_county_rates,
     #     geojson=counties,
     #     locations='fips',
     #     color='bup_rx_per1000',
@@ -449,8 +348,7 @@ def cs_dispensed():
     )
 
     cs_disp_line = px.line(cs_disp, x='year_filled', y='rx_count', title='cs dispensations', range_y=[0,22000000])
-    cs_disp_line.write_image('data/charts/total_cs.png')
-    cs_disp_line.write_html('data/charts/total_cs.html', include_plotlyjs='cdn')
+    cs_disp_line.write_html('charts/2024/total_cs.html', include_plotlyjs='cdn')
     print('total cs charts complete')
 
 
@@ -475,7 +373,7 @@ def cs_by_sched():
 
     cs_disp_sched_tree_map = px.treemap(cs_disp_sched, path=[px.Constant('all drugs'), 'year_filled', 'drug_schedule'], values='rx_count', color='drug_schedule')
     cs_disp_sched_tree_map.update_traces(marker=dict(cornerradius=5))
-    cs_disp_sched_tree_map.write_html('data/charts/cs_disp_sched_tree_map.html', include_plotlyjs='cdn')
+    cs_disp_sched_tree_map.write_html('charts/2024/cs_disp_sched_tree_map.html', include_plotlyjs='cdn')
     print('cs by sched complete')
 
 def obs():
@@ -561,8 +459,7 @@ def obs():
 
     obs_stacked = go.Figure(data=data, layout=layout)
 
-    obs_stacked.write_image('data/charts/obs_stacked.png')
-    obs_stacked.write_html('data/charts/obs_stacked.html')
+    obs_stacked.write_html('charts/2024/obs_stacked.html')
     print('opi benzo stims generated')
 
 def benzo_oos():
@@ -617,8 +514,7 @@ def benzo_oos():
         xanchor='right',
         yanchor='bottom',
     )
-    benzo_oos_fig.write_html('data/charts/benzo_oos.html', include_plotlyjs='cdn')
-    benzo_oos_fig.write_image('data/charts/benzo_oos.png')
+    benzo_oos_fig.write_html('charts/2024/benzo_oos.html', include_plotlyjs='cdn')
 
     print('benzo oos complete')
 
@@ -659,8 +555,7 @@ def andro_oos():
 
     andro_oos_fig.add_vrect(x0=x0, x1=x1, fillcolor='orange', opacity=0.25, line_width=0, annotation_text=f'out of state increase: {delta}', annotation_position='bottom right', annotation_font_color='red', annotation_font_size=10)
     andro_oos_fig.add_vrect(x0=x0, x1=x1, fillcolor='orange', opacity=0, line_width=0, annotation_text=f'in state state increase: {delta2}', annotation_position='top left', annotation_font_color='green', annotation_font_size=10)
-    andro_oos_fig.write_html('data/charts/andro_oos.html', include_plotlyjs='cdn')
-    andro_oos_fig.write_image('data/charts/andro_oos.png')
+    andro_oos_fig.write_html('charts/2024/andro_oos.html', include_plotlyjs='cdn')
 
     print('andro oos complete')
 
@@ -682,8 +577,7 @@ def bup():
     )
 
     bup_fig = px.line(bup_rx, x='year_filled', y='rx_count', title='buprenorphine dispensations by year', hover_data={'year_filled':True, 'rx_count':':.3s'})
-    bup_fig.write_html('data/charts/bup.html', include_plotlyjs='cdn')
-    bup_fig.write_image('data/charts/bup.png')
+    bup_fig.write_html('charts/2024/bup.html', include_plotlyjs='cdn')
 
     print('buprenorphine complete')
 
@@ -706,7 +600,7 @@ def opi_pills():
     )
 
     opi_pp = px.line(pills, x='year_filled', y='pills_per_rx', title='opioid pills per dispensation', hover_data={'year_filled':True, 'pills_per_rx':':.3s'})
-    opi_pp.write_html('data/charts/opi_pp.html', include_plotlyjs='cdn')
+    opi_pp.write_html('charts/2024/opi_pp.html', include_plotlyjs='cdn')
 
     layout = dict(
         hoversubplots='axis',
@@ -722,12 +616,13 @@ def opi_pills():
     ]
 
     opi_pills_per = go.Figure(data=data, layout=layout)
-    opi_pills_per.write_html('data/charts/opi_pp_stacked.html', include_plotlyjs='cdn')
+    opi_pills_per.write_html('charts/2024/opi_pp_stacked.html', include_plotlyjs='cdn')
     print('opi_pills complete')
 
 
 
 def main():
+    os.makedirs(os.path.dirname(f'charts/{YEAR}/'), exist_ok=True)
     county_data()
     cs_dispensed()
     # cs_by_sched() # not interesting this year
