@@ -16,8 +16,8 @@ WORKBOOK = 'annual report'
 YEAR = 2024
 load_dotenv()
 filters = {
-    'start_year':2019,
-    'end_year':2024
+    'start_year':YEAR-5,
+    'end_year':YEAR
 }
 
 
