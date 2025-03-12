@@ -112,7 +112,6 @@ def county_data():
         )
         .sort('year_filled')
     )
-    pat_county_rates.write_clipboard()
 
     fig = make_subplots(
         rows=2, cols=3,
