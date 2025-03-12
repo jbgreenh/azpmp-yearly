@@ -11,17 +11,11 @@ from plotly.subplots import make_subplots
 
 import tableau
 
+
 WORKBOOK = 'annual report'
 YEAR = 2024
 load_dotenv()
 
-# extra luids for now
-# total_cs_quantity = tableau.find_view_luid(view_name='Total CS Ave Quantity', workbook_name=workbook)
-# total_cs_gender = tableau.find_view_luid(view_name='Total CS by Gender', workbook_name=workbook)
-# total_cs_age = tableau.find_view_luid(view_name='Total CS by Agegroup', workbook_name=workbook)
-# total_cs_presc_county = tableau.find_view_luid(view_name='Total CS by Prescriber County', workbook_name=workbook)
-# opi_pills = tableau.find_view_luid(view_name='Opi Pills Dispensed', workbook_name=workbook)
-# androgen_dispensed = tableau.find_view_luid(view_name='Androgens', workbook_name=workbook)
 
 def human_format(num):
     num = float('{:.3g}'.format(num))
@@ -118,6 +112,7 @@ def county_data():
         )
         .sort('year_filled')
     )
+    pat_county_rates.write_clipboard()
 
     fig = make_subplots(
         rows=2, cols=3,
@@ -239,20 +234,6 @@ def county_data():
     opi_bup_county_rate_bubble.update_traces(marker=dict(sizemin=5))
     opi_bup_county_rate_bubble.write_html(f'charts/{YEAR}/opi_bup_county_rate_bubble.html', include_plotlyjs='cdn')
 
-    # opi_rx_county_rate_bubble = px.scatter(
-    #     pat_county_rates,
-    #     x='rx_per1000',
-    #     y='opi_rx_per1000',
-    #     size='population',
-    #     color='patient_county',
-    #     color_discrete_sequence=px.colors.qualitative.Light24,
-    #     animation_frame='year_filled',
-    #     animation_group='patient_county',
-    #     title='all cs vs opioid prescription rate by patient county'
-    # )
-    # opi_rx_county_rate_bubble.update_traces(marker=dict(sizemin=5))
-    # opi_rx_county_rate_bubble.write_html('data/charts/opi_rx_county_rate_bubble.html', include_plotlyjs='cdn')
-    #
     # county_rate_map = px.choropleth_map(
     #     data_frame=pat_county_rates,
     #     geojson=counties,
@@ -267,66 +248,6 @@ def county_data():
     #     animation_frame='year_filled'
     # )
     # county_rate_map.write_html('charts/2024/county_map.html', include_plotlyjs='cdn')
-    #
-    # opi_county_rate_map = px.choropleth_map(
-    #     data_frame=pat_county_rates,
-    #     geojson=counties,
-    #     locations='fips',
-    #     color='opi_rx_per1000',
-    #     map_style='carto-positron',
-    #     center = {"lat": 34.2744, "lon": -111.6602},
-    #     opacity=1,
-    #     zoom=5,
-    #     hover_data={'patient_county':True, 'opi_rx_per1000':':.2f', 'rx_count':':,d', 'population':':,d', 'fips':False},
-    #     title='opi prescription rate by patient county',
-    #     animation_frame='year_filled'
-    # )
-    # opi_county_rate_map.write_html('data/charts/opi_county_map.html', include_plotlyjs='cdn')
-    #
-    # benzo_county_rate_map = px.choropleth_map(
-    #     data_frame=pat_county_rates,
-    #     geojson=counties,
-    #     locations='fips',
-    #     color='benzo_rx_per1000',
-    #     map_style='carto-positron',
-    #     center = {"lat": 34.2744, "lon": -111.6602},
-    #     opacity=1,
-    #     zoom=5,
-    #     hover_data={'patient_county':True, 'benzo_rx_per1000':':.2f', 'rx_count':':,d', 'population':':,d', 'fips':False},
-    #     title='benzo prescription rate by patient county',
-    #     animation_frame='year_filled'
-    # )
-    # benzo_county_rate_map.write_html('data/charts/benzo_county_map.html', include_plotlyjs='cdn')
-    #
-    # stim_county_rate_map = px.choropleth_map(
-    #     data_frame=pat_county_rates,
-    #     geojson=counties,
-    #     locations='fips',
-    #     color='stim_rx_per1000',
-    #     map_style='carto-positron',
-    #     center = {"lat": 34.2744, "lon": -111.6602},
-    #     opacity=1,
-    #     zoom=5,
-    #     hover_data={'patient_county':True, 'benzo_rx_per1000':':.2f', 'rx_count':':,d', 'population':':,d', 'fips':False},
-    #     title='stim prescription rate by patient county',
-    #     animation_frame='year_filled'
-    # )
-    # stim_county_rate_map.write_html('data/charts/stim_county_map.html', include_plotlyjs='cdn')
-    #
-    # bup_county_rate_map = px.choropleth_map(
-    #     data_frame=pat_county_rates,
-    #     geojson=counties,
-    #     locations='fips',
-    #     color='bup_rx_per1000',
-    #     map_style='carto-positron',
-    #     center = {"lat": 34.2744, "lon": -111.6602},
-    #     opacity=1,
-    #     zoom=5,
-    #     hover_data={'patient_county':True, 'bup_rx_per1000':':.2f', 'rx_count':':,d', 'population':':,d', 'fips':False},
-    #     title='buprenorphine prescription rate by patient county',
-    #     animation_frame='year_filled'
-    # )
-    # bup_county_rate_map.write_html('data/charts/bup_county_map.html', include_plotlyjs='cdn')
 
     print('county data complete')
 
@@ -382,37 +303,39 @@ def obs():
     # ---
     print('generating opi benzo stims...')
 
-    opi_dispensed = tableau.find_view_luid(view_name='Opi Dispensed', workbook_name=WORKBOOK)
-    benzo_dispensed = tableau.find_view_luid(view_name='Benzo Dispensed', workbook_name=WORKBOOK)
-    stim_dispensed = tableau.find_view_luid(view_name='Stimulant Dispensed', workbook_name=WORKBOOK)
+    obs_luid = tableau.find_view_luid(view_name='OBS Dispensed', workbook_name=WORKBOOK)
+    obs = tableau.lazyframe_from_view_id(obs_luid, infer_schema_length=100).collect()
 
     opi = (
-        tableau.lazyframe_from_view_id(opi_dispensed, infer_schema_length=100).collect()
+        obs
         .select(
             pl.col('Year of Filled At').alias('year_filled'),
             pl.col('Prescription Count').str.replace_all(',','').cast(pl.Int32).alias('rx_count'),
-            pl.lit('opioid').alias('drug')
+            pl.col('obs').alias('drug')
         )
+        .filter(pl.col('drug') == 'opioid')
         .sort('year_filled')
     )
 
     benzo = (
-        tableau.lazyframe_from_view_id(benzo_dispensed, infer_schema_length=100).collect()
+        obs
         .select(
             pl.col('Year of Filled At').alias('year_filled'),
             pl.col('Prescription Count').str.replace_all(',','').cast(pl.Int32).alias('rx_count'),
-            pl.lit('benzodiazepine').alias('drug')
+            pl.col('obs').alias('drug')
         )
+        .filter(pl.col('drug') == 'benzodiazepine')
         .sort('year_filled')
     )
 
     stims = (
-        tableau.lazyframe_from_view_id(stim_dispensed, infer_schema_length=100).collect()
+        obs
         .select(
             pl.col('Year of Filled At').alias('year_filled'),
             pl.col('Prescription Count').str.replace_all(',','').cast(pl.Int32).alias('rx_count'),
-            pl.lit('stimulant').alias('drug')
+            pl.col('obs').alias('drug')
         )
+        .filter(pl.col('drug') == 'stimulant')
         .sort('year_filled')
     )
 
@@ -462,21 +385,24 @@ def obs():
     obs_stacked.write_html('charts/2024/obs_stacked.html')
     print('opi benzo stims generated')
 
-def benzo_oos():
+def oos_rx():
     # ---
-    # benzo oos
+    # oos_rx
     # ---
-    print('generating benzo oos...')
+    print('generating oos...')
 
-    benzo_disp_oos = tableau.find_view_luid(view_name='Benzo AZ?', workbook_name=WORKBOOK)
+    oos_luid = tableau.find_view_luid(view_name='Total CS AZ?', workbook_name=WORKBOOK)
+    oos = tableau.lazyframe_from_view_id(oos_luid, infer_schema_length=100).collect()
 
     benzo_oos = (
-        tableau.lazyframe_from_view_id(benzo_disp_oos, infer_schema_length=100).collect()
+        oos
         .select(
             pl.col('Year of Filled At').alias('year_filled'),
             pl.col('Prescription Count').str.replace_all(',','').cast(pl.Int32).alias('rx_count'),
-            pl.col('Prescriber AZ ?').alias('presc_az')
+            pl.col('Prescriber AZ ?').alias('presc_az'),
+            pl.col('drug type')
         )
+        .filter(pl.col('drug type') == 'benzodiazepine')
         .sort('year_filled')
     )
 
@@ -518,21 +444,15 @@ def benzo_oos():
 
     print('benzo oos complete')
 
-def andro_oos():
-    # ---
-    # andro oos
-    # ---
-    print('generating andro oos...')
-
-    andro_disp_oos = tableau.find_view_luid(view_name='Androgens AZ?', workbook_name=WORKBOOK)
-
     andro_oos = (
-        tableau.lazyframe_from_view_id(andro_disp_oos, infer_schema_length=100).collect()
+        oos
         .select(
             pl.col('Year of Filled At').alias('year_filled'),
             pl.col('Prescription Count').str.replace_all(',','').cast(pl.Int32).alias('rx_count'),
-            pl.col('Prescriber AZ ?').alias('presc_az')
+            pl.col('Prescriber AZ ?').alias('presc_az'),
+            pl.col('drug type')
         )
+        .filter(pl.col('drug type') == 'androgen')
         .sort('year_filled')
     )
 
@@ -559,16 +479,17 @@ def andro_oos():
 
     print('andro oos complete')
 
+    print('oos complete')
+
 def bup():
     # ---
-    # buprenorphine
+    # bup
     # ---
-    print('generating buprenorphine...')
+    print('generating bup...')
 
-    bup_dispensed = tableau.find_view_luid(view_name='Bup Dispensed', workbook_name=WORKBOOK)
-
+    bup_luid = tableau.find_view_luid('Bup Dispensed', workbook_name=WORKBOOK)
     bup_rx = (
-        tableau.lazyframe_from_view_id(bup_dispensed, infer_schema_length=100).collect()
+        tableau.lazyframe_from_view_id(bup_luid, infer_schema_length=100).collect()
         .select(
             pl.col('Year of Filled At').alias('year_filled'),
             pl.col('Prescription Count').str.replace_all(',','').cast(pl.Int32).alias('rx_count'),
@@ -627,8 +548,7 @@ def main():
     cs_dispensed()
     # cs_by_sched() # not interesting this year
     obs()
-    benzo_oos()
-    andro_oos()
+    oos_rx()
     bup()
     opi_pills()
 
