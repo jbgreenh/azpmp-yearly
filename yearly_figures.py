@@ -15,6 +15,10 @@ import tableau
 WORKBOOK = 'annual report'
 YEAR = 2024
 load_dotenv()
+filters = {
+    'start_year':2019,
+    'end_year':2024
+}
 
 
 def human_format(num):
@@ -36,7 +40,7 @@ def county_data():
     fips_txt = requests.get('https://transition.fcc.gov/oet/info/maps/census/fips/fips.txt').content.decode()
     sections = re.split(r'-+\s+-+', fips_txt)
 
-    def parse_fips_data(section:str, col_names:list) -> pl.DataFrame:
+    def parse_fips_data(section:str, col_names:list) -> pl.LazyFrame:
         data_dict = {col_names[0]: [], col_names[1]: []}
         for line in section.strip().splitlines():
             if not line:
@@ -44,9 +48,9 @@ def county_data():
             row = re.split(r'\s{2,}', line.strip())
             data_dict[col_names[0]].append(row[0])
             data_dict[col_names[1]].append(row[1])
-        return pl.DataFrame(data_dict)
+        return pl.LazyFrame(data_dict)
 
-    fips_state = parse_fips_data(sections[1], ['fips', 'state'])
+    fips_state = parse_fips_data(sections[1], ['fips', 'state']).collect()
     fips = parse_fips_data(sections[2], ['fips', 'county'])
 
     CENSUS_API_KEY = os.environ.get('CENSUS_API_KEY', 'CENSUS_API_KEY missing from .env file')
@@ -70,7 +74,7 @@ def county_data():
             county_pop_dict['population'].append(int(population))
             county_pop_dict['county'].append(f'{state}{county}')
 
-        county_pop_df = pl.DataFrame(county_pop_dict)
+        county_pop_df = pl.LazyFrame(county_pop_dict)
     else:
         sys.exit(f'error: {response.status_code}, {response.text}')
 
@@ -86,14 +90,16 @@ def county_data():
     total_cs_pat_county = tableau.find_view_luid(view_name='Total CS by Patient County', workbook_name=WORKBOOK)
 
     rx_pat_county = (
-        tableau.lazyframe_from_view_id(total_cs_pat_county, infer_schema_length=100).collect()
+        tableau.lazyframe_from_view_id(total_cs_pat_county, filters=filters, infer_schema_length=100)
         .select(
             pl.col('Orig Patient County').str.to_uppercase().alias('county'),
             pl.col('Year of Filled At').alias('year_filled'),
             pl.col('drug type'),
             pl.col('Prescription Count').str.replace_all(',','').cast(pl.Int32).alias('rx_count')
         )
+        .collect()
         .pivot('drug type', index=['county', 'year_filled'], values='rx_count')
+        .lazy()
         .rename({'All':'all_cs'})
     )
 
@@ -111,6 +117,7 @@ def county_data():
             {'county':'patient_county'}
         )
         .sort('year_filled')
+        .collect()
     )
 
     fig = make_subplots(
@@ -259,12 +266,13 @@ def cs_dispensed():
     total_cs = tableau.find_view_luid(view_name='Total CS Dispensed', workbook_name=WORKBOOK)
 
     cs_disp = (
-        tableau.lazyframe_from_view_id(total_cs, infer_schema_length=100).collect()
+        tableau.lazyframe_from_view_id(total_cs, filters=filters, infer_schema_length=100)
         .select(
             pl.col('Year of Filled At').alias('year_filled'),
             pl.col('Prescription Count').str.replace_all(',','').cast(pl.Int32).alias('rx_count')
         )
         .sort('year_filled')
+        .collect()
     )
 
     cs_disp_line = px.line(cs_disp, x='year_filled', y='rx_count', title='cs dispensations', range_y=[0,22000000])
@@ -282,13 +290,14 @@ def cs_by_sched():
     total_cs_sched = tableau.find_view_luid(view_name='Total CS Drug schedule', workbook_name=WORKBOOK)
 
     cs_disp_sched = (
-        tableau.lazyframe_from_view_id(total_cs_sched, infer_schema_length=100).collect()
+        tableau.lazyframe_from_view_id(total_cs_sched, filters=filters, infer_schema_length=100)
         .select(
             pl.col('Year of Filled At').alias('year_filled'),
             pl.col('Prescription Count').str.replace_all(',','').cast(pl.Int32).alias('rx_count'),
             pl.col('Drug Schedule').alias('drug_schedule')
         )
         .sort('year_filled')
+        .collect()
     )
 
     cs_disp_sched_tree_map = px.treemap(cs_disp_sched, path=[px.Constant('all drugs'), 'year_filled', 'drug_schedule'], values='rx_count', color='drug_schedule')
@@ -303,7 +312,7 @@ def obs():
     print('generating opi benzo stims...')
 
     obs_luid = tableau.find_view_luid(view_name='OBS Dispensed', workbook_name=WORKBOOK)
-    obs = tableau.lazyframe_from_view_id(obs_luid, infer_schema_length=100).collect()
+    obs = tableau.lazyframe_from_view_id(obs_luid, filters=filters, infer_schema_length=100).collect()
 
     opi = (
         obs
@@ -391,7 +400,7 @@ def oos_rx():
     print('generating oos...')
 
     oos_luid = tableau.find_view_luid(view_name='Total CS AZ?', workbook_name=WORKBOOK)
-    oos = tableau.lazyframe_from_view_id(oos_luid, infer_schema_length=100).collect()
+    oos = tableau.lazyframe_from_view_id(oos_luid, filters=filters, infer_schema_length=100)
 
     benzo_oos = (
         oos
@@ -403,6 +412,7 @@ def oos_rx():
         )
         .filter(pl.col('drug type') == 'benzodiazepine')
         .sort('year_filled')
+        .collect()
     )
 
     benzo_oos_fig = px.line(benzo_oos, x='year_filled', y='rx_count', color='presc_az', title='benzodiazepine dispensations by prescriber state', hover_data={'presc_az':True, 'year_filled':True, 'rx_count':':.3s'})
@@ -453,6 +463,7 @@ def oos_rx():
         )
         .filter(pl.col('drug type') == 'androgen')
         .sort('year_filled')
+        .collect()
     )
 
     andro_oos_fig = px.line(andro_oos, x='year_filled', y='rx_count', color='presc_az', title='androgen dispensations by prescriber state', hover_data={'presc_az':True, 'year_filled':True, 'rx_count':':.3s'})
@@ -488,12 +499,13 @@ def bup():
 
     bup_luid = tableau.find_view_luid('Bup Dispensed', workbook_name=WORKBOOK)
     bup_rx = (
-        tableau.lazyframe_from_view_id(bup_luid, infer_schema_length=100).collect()
+        tableau.lazyframe_from_view_id(bup_luid, filters=filters, infer_schema_length=100)
         .select(
             pl.col('Year of Filled At').alias('year_filled'),
             pl.col('Prescription Count').str.replace_all(',','').cast(pl.Int32).alias('rx_count'),
         )
         .sort('year_filled')
+        .collect()
     )
 
     bup_fig = px.line(bup_rx, x='year_filled', y='rx_count', title='buprenorphine dispensations by year', hover_data={'year_filled':True, 'rx_count':':.3s'})
@@ -506,7 +518,7 @@ def opi_pills():
     opi_pills = tableau.find_view_luid(view_name='Opi Pills Dispensed', workbook_name=WORKBOOK)
 
     pills = (
-        tableau.lazyframe_from_view_id(opi_pills, infer_schema_length=100)
+        tableau.lazyframe_from_view_id(opi_pills, filters=filters, infer_schema_length=100)
         .select(
             pl.col('Year of Filled At').alias('year_filled'),
             pl.col('Prescription Count').str.replace_all(',','').cast(pl.Int32).alias('rx_count'),
