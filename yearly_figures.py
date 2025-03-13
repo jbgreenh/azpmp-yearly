@@ -37,7 +37,7 @@ def county_data():
 
     counties = requests.get('https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json').json()
 
-    fips_txt = requests.get('https://transition.fcc.gov/oet/info/maps/census/fips/fips.txt').content.decode()
+    fips_txt = requests.get('https://transition.fcc.gov/oet/info/maps/census/fips/fips.txt').text
     sections = re.split(r'-+\s+-+', fips_txt)
 
     def parse_fips_data(section:str, col_names:list) -> pl.LazyFrame:
