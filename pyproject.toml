@@ -1,7 +1,7 @@
 [project]
-name = "azpmp-yearly-2024"
+name = "azpmp-yearly"
 version = "0.1.0"
-description = "Add your description here"
+description = "generate figures for az pmp yearly report"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
