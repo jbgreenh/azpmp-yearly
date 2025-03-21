@@ -11,7 +11,7 @@ wheels = [
 ]
 
 [[package]]
-name = "azpmp-yearly-2024"
+name = "azpmp-yearly"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
