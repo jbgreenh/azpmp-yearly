@@ -534,21 +534,21 @@ def opi_pills():
     opi_pp = px.line(pills, x='year_filled', y='pills_per_rx', title='opioid pills per dispensation', hover_data={'year_filled':True, 'pills_per_rx':':.3s'})
     opi_pp.write_html('charts/2024/opi_pp.html', include_plotlyjs='cdn')
 
-    layout = dict(
-        hoversubplots='axis',
-        title=dict(text='opioid pills and dispensations'),
-        hovermode='x',
-        grid=dict(rows=3, columns=1)
-    )
-
-    data = [
-        go.Scatter(x=pills['year_filled'], y = pills['rx_count'], xaxis='x', yaxis='y', name='dispensations', hovertemplate='%{y:.3s}'),
-        go.Scatter(x=pills['year_filled'], y = pills['pills_count'], xaxis='x', yaxis='y2', name='pills', hovertemplate='%{y:.3s}'),
-        go.Scatter(x=pills['year_filled'], y = pills['pills_per_rx'], xaxis='x', yaxis='y3', name='pills per dispensation', hovertemplate='%{y:.3s}'),
-    ]
-
-    opi_pills_per = go.Figure(data=data, layout=layout)
-    opi_pills_per.write_html('charts/2024/opi_pp_stacked.html', include_plotlyjs='cdn')
+    # layout = dict(
+    #     hoversubplots='axis',
+    #     title=dict(text='opioid pills and dispensations'),
+    #     hovermode='x',
+    #     grid=dict(rows=3, columns=1)
+    # )
+    #
+    # data = [
+    #     go.Scatter(x=pills['year_filled'], y = pills['rx_count'], xaxis='x', yaxis='y', name='dispensations', hovertemplate='%{y:.3s}'),
+    #     go.Scatter(x=pills['year_filled'], y = pills['pills_count'], xaxis='x', yaxis='y2', name='pills', hovertemplate='%{y:.3s}'),
+    #     go.Scatter(x=pills['year_filled'], y = pills['pills_per_rx'], xaxis='x', yaxis='y3', name='pills per dispensation', hovertemplate='%{y:.3s}'),
+    # ]
+    #
+    # opi_pills_per = go.Figure(data=data, layout=layout)
+    # opi_pills_per.write_html('charts/2024/opi_pp_stacked.html', include_plotlyjs='cdn')
     print('opi_pills complete')
 
 
