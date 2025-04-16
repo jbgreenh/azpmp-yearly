@@ -235,10 +235,9 @@ def county_data():
         color_discrete_sequence=px.colors.qualitative.Light24,
         animation_frame='year_filled',
         animation_group='patient_county',
-        title='opioid vs buprenorphine prescription rate by patient county'
     )
     opi_bup_county_rate_bubble.update_traces(marker=dict(sizemin=5))
-    opi_bup_county_rate_bubble.write_html(f'charts/{YEAR}/opi_bup_county_rate_bubble.html', include_plotlyjs='cdn')
+    opi_bup_county_rate_bubble.write_html(f'charts/{YEAR}/opi_bup_county_rate_bubble.html', config={'displayModeBar':False}, include_plotlyjs='cdn')
 
     # county_rate_map = px.choropleth_map(
     #     data_frame=pat_county_rates,
@@ -275,8 +274,8 @@ def cs_dispensed():
         .collect()
     )
 
-    cs_disp_line = px.line(cs_disp, x='year_filled', y='rx_count', title='cs dispensations', range_y=[0,22000000])
-    cs_disp_line.write_html('charts/2024/total_cs.html', include_plotlyjs='cdn')
+    cs_disp_line = px.line(cs_disp, x='year_filled', y='rx_count', range_y=[0,22000000])
+    cs_disp_line.write_html('charts/2024/total_cs.html', config={'displayModeBar':False}, include_plotlyjs='cdn')
     print('total cs charts complete')
 
 
@@ -302,7 +301,7 @@ def cs_by_sched():
 
     cs_disp_sched_tree_map = px.treemap(cs_disp_sched, path=[px.Constant('all drugs'), 'year_filled', 'drug_schedule'], values='rx_count', color='drug_schedule')
     cs_disp_sched_tree_map.update_traces(marker=dict(cornerradius=5))
-    cs_disp_sched_tree_map.write_html('charts/2024/cs_disp_sched_tree_map.html', include_plotlyjs='cdn')
+    cs_disp_sched_tree_map.write_html('charts/2024/cs_disp_sched_tree_map.html', config={'displayModeBar':False},  include_plotlyjs='cdn')
     print('cs by sched complete')
 
 def obs():
@@ -355,7 +354,6 @@ def obs():
 
     layout = dict(
         hoversubplots='axis',
-        title=dict(text='dispensations by drug type'),
         hovermode='x',
         grid=dict(rows=3, columns=1),
         shapes=[
@@ -390,7 +388,7 @@ def obs():
 
     obs_stacked = go.Figure(data=data, layout=layout)
 
-    obs_stacked.write_html('charts/2024/obs_stacked.html')
+    obs_stacked.write_html('charts/2024/obs_stacked.html', config={'displayModeBar':False}, include_plotlyjs='cdn')
     print('opi benzo stims generated')
 
 def oos_rx():
@@ -415,7 +413,7 @@ def oos_rx():
         .collect()
     )
 
-    benzo_oos_fig = px.line(benzo_oos, x='year_filled', y='rx_count', color='presc_az', title='benzodiazepine dispensations by prescriber state', hover_data={'presc_az':True, 'year_filled':True, 'rx_count':':.3s'})
+    benzo_oos_fig = px.line(benzo_oos, x='year_filled', y='rx_count', color='presc_az', hover_data={'presc_az':True, 'year_filled':True, 'rx_count':':.3s'})
     # benzo_oos_fig.add_vrect(x0=benzo_oos['year_filled'].max() - 1, x1=benzo_oos['year_filled'].max(),
     #                         annotation_text='increase in out of state rx', annotation_position='bottom right',
     #                         fillcolor='red', opacity=0.25, line_width=0)
@@ -449,7 +447,7 @@ def oos_rx():
         xanchor='right',
         yanchor='bottom',
     )
-    benzo_oos_fig.write_html('charts/2024/benzo_oos.html', include_plotlyjs='cdn')
+    benzo_oos_fig.write_html('charts/2024/benzo_oos.html', config={'displayModeBar':False},  include_plotlyjs='cdn')
 
     print('benzo oos complete')
 
@@ -466,7 +464,7 @@ def oos_rx():
         .collect()
     )
 
-    andro_oos_fig = px.line(andro_oos, x='year_filled', y='rx_count', color='presc_az', title='androgen dispensations by prescriber state', hover_data={'presc_az':True, 'year_filled':True, 'rx_count':':.3s'})
+    andro_oos_fig = px.line(andro_oos, x='year_filled', y='rx_count', color='presc_az', hover_data={'presc_az':True, 'year_filled':True, 'rx_count':':.3s'})
     layout = dict(
         hoversubplots='axis',
         hovermode='x'
@@ -485,7 +483,7 @@ def oos_rx():
 
     andro_oos_fig.add_vrect(x0=x0, x1=x1, fillcolor='orange', opacity=0.25, line_width=0, annotation_text=f'out of state increase: {delta}', annotation_position='bottom right', annotation_font_color='red', annotation_font_size=10)
     andro_oos_fig.add_vrect(x0=x0, x1=x1, fillcolor='orange', opacity=0, line_width=0, annotation_text=f'in state state increase: {delta2}', annotation_position='top left', annotation_font_color='green', annotation_font_size=10)
-    andro_oos_fig.write_html('charts/2024/andro_oos.html', include_plotlyjs='cdn')
+    andro_oos_fig.write_html('charts/2024/andro_oos.html', config={'displayModeBar':False},  include_plotlyjs='cdn')
 
     print('andro oos complete')
 
@@ -508,9 +506,8 @@ def bup():
         .collect()
     )
 
-    bup_fig = px.line(bup_rx, x='year_filled', y='rx_count', title='buprenorphine dispensations by year', hover_data={'year_filled':True, 'rx_count':':.3s'})
-    bup_fig.write_html('charts/2024/bup.html', include_plotlyjs='cdn')
-
+    bup_fig = px.line(bup_rx, x='year_filled', y='rx_count', hover_data={'year_filled':True, 'rx_count':':.3s'})
+    bup_fig.write_html('charts/2024/bup.html', config={'displayModeBar':False}, include_plotlyjs='cdn')
     print('buprenorphine complete')
 
 def opi_pills():
@@ -531,8 +528,8 @@ def opi_pills():
         .collect()
     )
 
-    opi_pp = px.line(pills, x='year_filled', y='pills_per_rx', title='opioid pills per dispensation', hover_data={'year_filled':True, 'pills_per_rx':':.3s'})
-    opi_pp.write_html('charts/2024/opi_pp.html', include_plotlyjs='cdn')
+    opi_pp = px.line(pills, x='year_filled', y='pills_per_rx', hover_data={'year_filled':True, 'pills_per_rx':':.3s'})
+    opi_pp.write_html('charts/2024/opi_pp.html', config={'displayModeBar':False}, include_plotlyjs='cdn')
 
     # layout = dict(
     #     hoversubplots='axis',
