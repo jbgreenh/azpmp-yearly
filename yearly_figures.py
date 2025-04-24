@@ -1,6 +1,7 @@
 import os
 import re
 import sys
+from datetime import date
 
 import plotly.express as px
 import plotly.graph_objects as go
@@ -11,9 +12,10 @@ from plotly.subplots import make_subplots
 
 import tableau
 
-
 WORKBOOK = 'annual report'
-YEAR = 2024
+
+current_yr = date.today().year
+YEAR = current_yr - 1
 load_dotenv()
 filters = {
     'start_year':YEAR-5,
