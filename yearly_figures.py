@@ -528,7 +528,7 @@ def opi_pills():
         .collect()
     )
 
-    opi_pp = px.line(pills, x='year_filled', y='pills_per_rx', hover_data={'year_filled':True, 'pills_per_rx':':.3s'})
+    opi_pp = px.line(pills, x='year_filled', y='pills_per_rx', range_y=[0,70], hover_data={'year_filled':True, 'pills_per_rx':':.3s'})
     opi_pp.write_html('charts/2024/opi_pp.html', config={'displayModeBar':False}, include_plotlyjs='cdn')
 
     # layout = dict(
