@@ -14,11 +14,10 @@ import tableau
 
 WORKBOOK = 'annual report'
 
-current_yr = date.today().year
-YEAR = current_yr - 1
+YEAR = date.today().year - 1
 load_dotenv()
 filters = {
-    'start_year':YEAR-5,
+    'start_year':YEAR-4,
     'end_year':YEAR
 }
 
