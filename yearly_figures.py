@@ -356,6 +356,7 @@ def obs():
 
     layout = dict(
         hoversubplots='axis',
+        xaxis={'tickformat': ',d'},
         hovermode='x',
         grid=dict(rows=3, columns=1),
         shapes=[
@@ -421,7 +422,8 @@ def oos_rx():
     #                         fillcolor='red', opacity=0.25, line_width=0)
     layout = dict(
         hoversubplots='axis',
-        hovermode='x'
+        hovermode='x',
+        xaxis={'tickformat': ',d'},
     )
     benzo_oos_fig.update_layout(layout)
 
@@ -469,7 +471,8 @@ def oos_rx():
     andro_oos_fig = px.line(andro_oos, x='year_filled', y='rx_count', color='presc_az', hover_data={'presc_az':True, 'year_filled':True, 'rx_count':':.3s'})
     layout = dict(
         hoversubplots='axis',
-        hovermode='x'
+        hovermode='x',
+        xaxis={'tickformat': ',d'},
     )
     andro_oos_fig.update_layout(layout)
 
