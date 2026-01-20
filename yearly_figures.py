@@ -356,7 +356,7 @@ def obs():
 
     layout = dict(
         hoversubplots='axis',
-        xaxis={'tickformat': ',d'},
+        xaxis = {'tickvals': list(range(2000, 3000))},
         hovermode='x',
         grid=dict(rows=3, columns=1),
         shapes=[
@@ -423,7 +423,7 @@ def oos_rx():
     layout = dict(
         hoversubplots='axis',
         hovermode='x',
-        xaxis={'tickformat': ',d'},
+        xaxis = {'tickvals': list(range(2000, 3000))},
     )
     benzo_oos_fig.update_layout(layout)
 
@@ -472,7 +472,7 @@ def oos_rx():
     layout = dict(
         hoversubplots='axis',
         hovermode='x',
-        xaxis={'tickformat': ',d'},
+        xaxis = {'tickvals': list(range(2000, 3000))},
     )
     andro_oos_fig.update_layout(layout)
 
