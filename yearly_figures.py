@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import re
 import sys
 from datetime import date
@@ -120,6 +121,10 @@ def county_data():
         .sort('year_filled')
         .collect()
     )
+    fn = Path('per1000_rates.csv')
+    pat_county_rates.write_csv(fn)
+    print(f'{fn} written')
+
 
     fig = make_subplots(
         rows=2, cols=3,
