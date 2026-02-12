@@ -121,6 +121,7 @@ def county_data():
         .sort('year_filled')
         .collect()
     )
+
     fn = Path('per1000_rates.csv')
     pat_county_rates.write_csv(fn)
     print(f'{fn} written')
@@ -281,6 +282,10 @@ def cs_dispensed():
     )
 
     cs_disp_line = px.line(cs_disp, x='year_filled', y='rx_count', range_y=[0,22000000])
+    layout = dict(
+        xaxis = {'tickvals':cs_disp['year_filled']},
+    )
+    cs_disp_line.update_layout(layout)
     cs_disp_line.write_html(f'charts/{YEAR}/total_cs.html', config={'displayModeBar':False}, include_plotlyjs='cdn')
     print('total cs charts complete')
 
@@ -516,6 +521,10 @@ def bup():
     )
 
     bup_fig = px.line(bup_rx, x='year_filled', y='rx_count', hover_data={'year_filled':True, 'rx_count':':.3s'})
+    layout = dict(
+        xaxis = {'tickvals':bup_rx['year_filled']},
+    )
+    bup_fig.update_layout(layout)
     bup_fig.write_html(f'charts/{YEAR}/bup.html', config={'displayModeBar':False}, include_plotlyjs='cdn')
     print('buprenorphine complete')
 
@@ -538,6 +547,10 @@ def opi_pills():
     )
 
     opi_pp = px.line(pills, x='year_filled', y='pills_per_rx', range_y=[0,70], hover_data={'year_filled':True, 'pills_per_rx':':.3s'})
+    layout = dict(
+        xaxis = {'tickvals':pills['year_filled']},
+    )
+    opi_pp.update_layout(layout)
     opi_pp.write_html(f'charts/{YEAR}/opi_pp.html', config={'displayModeBar':False}, include_plotlyjs='cdn')
 
     # layout = dict(
